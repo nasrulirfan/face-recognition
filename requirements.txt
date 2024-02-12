@@ -1,0 +1,12 @@
+Flask==3.0.2
+keras==2.10.0
+keras_vggface==0.6
+matplotlib==3.8.0
+numpy==1.26.4
+pandas==2.2.0
+Pillow==10.2.0
+pymongo==4.6.1
+python_bcrypt==0.3.2
+Requests==2.31.0
+tensorflow==2.10.1
+Werkzeug==3.0.1g
