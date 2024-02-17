@@ -100,7 +100,8 @@ def check_current_user(user):
         # Check if there are face is high probablity in the model
         if (predict_faces(current_user_path) > 0.8):
             return False
-
+        else:
+            return True
     else:
         return True
 
