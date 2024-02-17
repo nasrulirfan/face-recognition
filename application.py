@@ -190,6 +190,9 @@ def facelogin():
 
         #Check whether user has set face recognition yet
         user_found = users.find_one({"name": id_})
+        if not user_found:
+            return render_template("camera.html", message=10)
+
         trained = user_found["trained"]
 
         if (trained):
@@ -199,10 +202,11 @@ def facelogin():
             predict = face_recognition.predict_faces(
             './static/face/captured-' + str(id_) + '.jpg')
             os.remove('./static/face/captured-' + str(id_) + '.jpg')
-            print(predict)
             if (predict == id_):
                 session["user_id"] = user_found["name"]
                 return redirect("/success")
+            elif (predict == "face undetected"):
+                return render_template("camera.html", message=12)
             else:
                 return render_template("camera.html", message=3)
         else:
@@ -214,15 +218,20 @@ def facelogin():
 @app.route("/facesetup", methods=["GET", "POST"])
 def facesetup():
     if request.method == "POST":
-
         encoded_image = (request.form.get("pic") + "==").encode('utf-8')
         user_name=session["user_id"]
         user_found = users.find_one({"name":user_name })
+        if not user_found:
+            return render_template("camera.html", message=10)
         id_ = user_found["name"]
 
         # Create a folder for the user face
-        path = os.path.join('./static/face', id_)
-        os.makedirs(path, exist_ok=True)
+        path = os.path.join('./static/face/', id_)
+        try:
+            os.makedirs(path, exist_ok=True)
+            print("Directory created successfully!")
+        except OSError as e:
+            print("Failed to create directory:", e)
 
         compressed_data = zlib.compress(encoded_image, 5)
         uncompressed_data = zlib.decompress(compressed_data)
@@ -233,48 +242,25 @@ def facesetup():
         new_image_handle.write(decoded_data)
         new_image_handle.close()
 
-        ##Preprocess stored image
+        #Preprocess stored image
         if face_recognition.preprocess_faces():
-            ##Train Custom Image
-            if face_recognition.train_save_model():
-                users.update_one({ "name": id_ }, { "$set": { "trained": True }})
-                render_template("camera.html", message=7)
-                return redirect("/home")
+            if face_recognition.check_current_user(id_):
+                ##Train Custom Image
+                if face_recognition.train_save_model():
+                    users.update_one({ "name": id_ }, { "$set": { "trained": True }})
+                    render_template("camera.html", message=7)
+                    return redirect("/home")
+                else:
+                    return render_template("camera.html", message=8)
             else:
-                return render_template("camera.html", message=8)
-
-        ### PAST
-        # else: 
-        #     return render_template("camera.html", message=9)
-
-        # image_of_user = face_recognition.load_image_file(
-        #     './static/face/' + str(id_) + '.jpg')
-        
-        # listFaces = os.listdir('./static/face')
-        # user_face_encoding = face_recognition.face_encodings(image_of_user)[0]
-        # print(listFaces)
-        # flag = False
-        # for face in listFaces:
-        #     toCheck = face_recognition.load_image_file('./static/face/' + face)
-            
-        #     check_image = cv2.cvtColor(toCheck, cv2.COLOR_BGR2RGB)
-        #     check_image_encoding = face_recognition.face_encodings(check_image)[0]
-        #     #  compare faces
-        #     results = face_recognition.compare_faces(
-        #         [user_face_encoding], check_image_encoding)
-
-        #     if results[0] == True:
-        #         print('results is true')
-        #         flag = True
-        #         break
-
-        # if flag:
-        #     print("inside flag")
-        #     os.remove('./static/face/' + str(id_) + '.jpg')
-        #     # users.delete_one({"name": user_name})
-        #     return render_template("camera.html", message=6)
-
-        # return redirect("/home")
+                # # Delete current acc from database when face same
+                # os.remove('./static/face/' + str(id_) + '.jpg')
+                # os.remove('./static/face/' + str(id_) + '/train/' + str(id_) + '.jpg')
+                # users.delete_one({"name": user_name})
+                return render_template("camera.html", message=6)
+        else:
+            # Picture captured not clear/>1 faces, Aborting
+            return render_template("camera.html", message=11)
 
     else:
         return render_template("face.html")

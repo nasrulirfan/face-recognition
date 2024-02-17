@@ -59,7 +59,7 @@ def preprocess_faces():
                 if len(faces) != 1:
                     print(f'---Photo skipped---\n')
                     print(f'One of the face not detected\n')
-                    continue
+                    return False
 
                 # save the detected face(s) and associate them with the label
                 for (x_, y_, w, h) in faces:
@@ -67,9 +67,7 @@ def preprocess_faces():
                     face_detect = cv2.rectangle(imgtest,
                                                 (x_, y_),
                                                 (x_ + w, y_ + h),
-                                                (255, 0, 255), 2)
-                    plt.imshow(face_detect)
-                    plt.show()
+                                                (255, 0, 255), 2)               
 
                     # resize the detected face to 224x224
                     size = (image_width, image_height)
@@ -82,7 +80,7 @@ def preprocess_faces():
                     image_array = np.array(resized_image, "uint8")
 
                     # remove the original image
-                    os.remove(path)
+                    # os.remove(path)
 
                     # replace the image with only the face
                     im = Image.fromarray(image_array)
@@ -91,6 +89,21 @@ def preprocess_faces():
                     newjpgPath = os.path.join(trainpath,file)
                     im.save(newjpgPath)
     return True
+
+#Check current user with (if exist) model to prevent from using same face
+def check_current_user(user):
+    # Check if model already trained
+    h5_path = './transfer_learning_trained_face_cnn_model.h5'
+    if os.path.exists(h5_path):
+        current_user_path = './static/face/' + str(user) + '/train/' + str(user) + '.jpg'
+        print(predict_faces(current_user_path))
+        # Check if there are face is high probablity in the model
+        if (predict_faces(current_user_path) > 0.8):
+            return False
+
+    else:
+        return True
+
 
 def train_save_model():
     ## Augmenting ##
@@ -140,11 +153,11 @@ def train_save_model():
     for layer in model.layers[19:]:
         layer.trainable = True
 
-    ## Compiling and Training the Model ##
     model.compile(optimizer='Adam',
         loss='categorical_crossentropy',
         metrics=['accuracy'])
 
+    ## Training the Model
     model.fit(train_generator,
     batch_size = 1,
     verbose = 1,
@@ -201,12 +214,11 @@ def predict_faces(captured_user_image):
     # if not exactly 1 face is detected, skip this photo
     if len(faces) != 1: 
         print("---Please provide only 1 face photo, skipped---")
+        return "face undetected"
 
     for (x_, y_, w, h) in faces:
         # draw the face detected
         face_detect = cv2.rectangle(imgtest, (x_, y_), (x_+w, y_+h), (255, 0, 255), 2)
-        plt.imshow(face_detect)
-        plt.show()
 
         # resize the detected face to 224x224
         size = (image_width, image_height)
@@ -220,7 +232,7 @@ def predict_faces(captured_user_image):
 
         # making prediction
         predicted_prob = model.predict(x)
-        print(predicted_prob)
+        print("Predicted Probability: " + predicted_prob)
         print(predicted_prob[0].argmax())
         print("Predicted face: " + class_list[predicted_prob[0].argmax()])
         print("============================\n")
