@@ -17,6 +17,7 @@ from flask import Flask, render_template, request, url_for, redirect, session
 import pymongo
 import bcrypt
 import os
+import time
 
 # Configure application
 app = Flask(__name__)
@@ -202,11 +203,11 @@ def facelogin():
             predict = face_recognition.predict_faces(
             './static/face/captured-' + str(id_) + '.jpg')
             os.remove('./static/face/captured-' + str(id_) + '.jpg')
-            if (predict == id_):
+            if (predict == "face undetected"):
+                return render_template("camera.html", message=12)
+            elif (predict['name'] == id_):
                 session["user_id"] = user_found["name"]
                 return redirect("/success")
-            elif (predict == "face undetected"):
-                return render_template("camera.html", message=12)
             else:
                 return render_template("camera.html", message=3)
         else:
@@ -245,19 +246,18 @@ def facesetup():
         #Preprocess stored image
         if face_recognition.preprocess_faces():
             if face_recognition.check_current_user(id_):
-                ##Train Custom Image
                 if face_recognition.train_save_model():
                     users.update_one({ "name": id_ }, { "$set": { "trained": True }})
-                    render_template("camera.html", message=7)
-                    return redirect("/home")
+                    flash(f"Trained successful!")
+                    return redirect('/home')
                 else:
                     return render_template("camera.html", message=8)
             else:
-                # # Delete current acc from database when face same
-                # os.remove('./static/face/' + str(id_) + '.jpg')
-                # os.remove('./static/face/' + str(id_) + '/train/' + str(id_) + '.jpg')
-                # users.delete_one({"name": user_name})
-                return render_template("camera.html", message=6)
+                # Delete current acc from database when face same
+                os.remove('./static/face/' + str(id_) + '/' + str(id_) + '.jpg')
+                os.remove('./static/face/' + str(id_) + '/train/' + str(id_) + '.jpg')
+                users.delete_one({"name": user_name})
+                return render_template("login.html", messager=5)
         else:
             # Picture captured not clear/>1 faces, Aborting
             return render_template("camera.html", message=11)

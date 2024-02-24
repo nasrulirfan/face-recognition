@@ -24,8 +24,16 @@
     <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/fontawesome.js" integrity="sha384-6OIrr52G08NpOFSZdxxz1xdNSndlD4vdcf/q2myIUVO0VsqaGHJsB0RaBE01VTOY" crossorigin="anonymous"></script>
 
 </head>
-
 <body style="font-family: "Nunito Sans", "Helvetica Neue", sans-serif">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul class=flashes>
+      {% for message in messages %}
+      <H3 style="align-content: center;font-family: 'Roboto', sans-serif;position: absolute;border-radius: 0; left: 43%; top:0%;" class="alert-danger">{{ message }}</H3>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
 
     <div class="wrapper">
         <!-- Sidebar  -->
@@ -67,6 +75,7 @@
                 </div>
        
 <center>
+  {% block body %}{% endblock %}
 
             {% block main %}{% endblock %}
 

@@ -8,7 +8,7 @@ import pandas as pd
 import tensorflow.keras as keras
 import pickle
 import keras.utils as image
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.layers import Flatten, Dense, GlobalAveragePooling2D
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.mobilenet import preprocess_input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -17,6 +17,8 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from keras_vggface.vggface import VGGFace
 from keras_vggface import utils
+from keras_vggface.utils import decode_predictions
+from deepface import DeepFace
 
 ## Preprocess Captured User Face Custom Images ##
 def preprocess_faces():
@@ -41,7 +43,6 @@ def preprocess_faces():
                 path = os.path.join(root, file)
                 # get the label name (name of the person)
                 label = os.path.basename(root).replace(" ", ".").lower()
-
                 # add the label (key) and its number (value)
                 if label not in label_ids:
                     label_ids[label] = current_id
@@ -53,7 +54,7 @@ def preprocess_faces():
 
                 # get the faces detected in the image
                 faces = facecascade.detectMultiScale(imgtest,
-                                                    scaleFactor=1.1, minNeighbors=5)
+                                                    scaleFactor=1.2, minNeighbors=5)
 
                 # if not exactly 1 face is detected, skip this photo
                 if len(faces) != 1:
@@ -93,18 +94,25 @@ def preprocess_faces():
 #Check current user with (if exist) model to prevent from using same face
 def check_current_user(user):
     # Check if model already trained
-    h5_path = './transfer_learning_trained_face_cnn_model.h5'
-    if os.path.exists(h5_path):
-        current_user_path = './static/face/' + str(user) + '/train/' + str(user) + '.jpg'
-        print(predict_faces(current_user_path))
-        # Check if there are face is high probablity in the model
-        if (predict_faces(current_user_path) > 0.8):
-            return False
-        else:
-            return True
-    else:
-        return True
-
+    headshots_folder_name = 'static/face/'
+    images_dir = os.path.join(".", headshots_folder_name)
+    current_user_path = './static/face/' + str(user) + '/' + str(user) + '.jpg'
+    for root, _, files in os.walk(images_dir):
+        if os.path.basename(root) == 'train':
+            continue
+        for file in files:
+            if file.endswith(("png", "jpg", "jpeg")):
+                if file != str(user) + '.jpg':
+                    print(file)
+                    other_userpath = os.path.join(root, file)
+                    result = DeepFace.verify(img1_path = current_user_path, 
+                    img2_path = other_userpath, 
+                    distance_metric = "euclidean_l2",
+                    model_name="Dlib")
+                    print(result)
+                    if result['distance'] < 0.2:
+                        return False
+    return True
 
 def train_save_model():
     ## Augmenting ##
@@ -124,27 +132,12 @@ def train_save_model():
     NO_CLASSES = len(train_generator.class_indices.values())
 
     ## Building Model ##
-    base_model = VGGFace(include_top=False,
-        model='resnet50',
-        input_shape=(224, 224, 3))
-    base_model.summary()
-
-    print(len(base_model.layers))
-    # 26 layers in the original VGG-Face
-
-    #Add layers for new training faces
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-
-    x = Dense(1024, activation='relu')(x)
-    x = Dense(1024, activation='relu')(x)
-    x = Dense(512, activation='relu')(x)
-    # final layer with softmax activation
-    preds = Dense(NO_CLASSES, activation='softmax')(x)
-    # create a new model with the base model's original input and the 
-    # new model's output
-    model = Model(inputs = base_model.input, outputs = preds)
-    model.summary()
+    base_model = VGGFace(model='resnet50', include_top=False, input_shape=(224, 224, 3))
+    last_layer = base_model.get_layer('avg_pool').output
+    x = Flatten(name='flatten')(last_layer)
+    out = Dense(NO_CLASSES, activation='softmax', name='classifier')(x)
+    model = Model(base_model.input, out)
+    # model.summary()
 
     # don't train the first 19 layers - 0..18 (Since these layers trained by VGGFace)
     for layer in model.layers[:19]:
@@ -154,7 +147,7 @@ def train_save_model():
     for layer in model.layers[19:]:
         layer.trainable = True
 
-    model.compile(optimizer='Adam',
+    model.compile(optimizer=Adam(),
         loss='categorical_crossentropy',
         metrics=['accuracy'])
 
@@ -210,7 +203,9 @@ def predict_faces(captured_user_image):
 
     # get the faces detected in the image
     faces = facecascade.detectMultiScale(imgtest, 
-        scaleFactor=1.1, minNeighbors=5)
+        scaleFactor=1.2, minNeighbors=5)
+    
+    result = {}
 
     # if not exactly 1 face is detected, skip this photo
     if len(faces) != 1: 
@@ -229,15 +224,20 @@ def predict_faces(captured_user_image):
         # prepare the image for prediction
         x = image.img_to_array(resized_image)
         x = np.expand_dims(x, axis=0)
-        x = utils.preprocess_input(x, version=1)
+        x = utils.preprocess_input(x, version=2)
 
         # making prediction
         predicted_prob = model.predict(x)
-        print("Predicted Probability: " + predicted_prob)
+        # print(decode_predictions(predicted_prob))
+
+        print("Prediction Prob")
+        print(predicted_prob)
         print(predicted_prob[0].argmax())
         print("Predicted face: " + class_list[predicted_prob[0].argmax()])
         print("============================\n")
-        return class_list[predicted_prob[0].argmax()]
+        result['name'] = class_list[predicted_prob[0].argmax()]
+        result['probability'] = predicted_prob
+        return result
                 
         
 

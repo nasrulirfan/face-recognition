@@ -48,8 +48,6 @@
 <H3 style="align-content: center;font-family: 'Roboto', sans-serif;position: absolute;border-radius: 0; left: 43%; top:0%;" class="alert-danger">Please capture again. Could not find a face or face not clear<br></H3>
 {%endif%}
 
-
-
 <div style="padding: 0px;margin: 0px;width:220;height:240;">
 
 <canvas 
@@ -77,6 +75,24 @@ autoplay>
  Capture
 </button>
 
+{%if request.path == '/facesetup' %}
+<form action="/facesetup" method="post"  enctype="multipart/form-data" >
+<input 
+type="text" 
+id="pic" name="pic" 
+style="display:none">
+
+<button id="scan"
+ style="align-content: center;position: absolute;border-radius: 100px;display: none; left: 52%; top:50%;"
+ class="btn btn-primary">
+  scan
+</button>
+</form>
+{%endif%}
+
+
+
+{%if request.path == '/facelogin' %}
 <form action="/facelogin" method="post"  enctype="multipart/form-data" >
 <input 
 type="text" 
@@ -98,8 +114,8 @@ style="display:none">
  class="btn btn-primary">
   scan
 </button>
-
 </form>
+{%endif%}
 
 </div>
 
