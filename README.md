@@ -26,12 +26,15 @@ cd <path to your project>
 pip install -r requirements.txt
 ```
 
-6. Run your flask application
+6. Install MongoDB (if not installed yet) https://www.mongodb.com/try/download/community and run your MongoDB
+
+7. Check at application.py (line 32 `client = pymongo.MongoClient("mongodb://localhost:<your port>/<your database>")`) and update it with your own mongodb port and database name
+
+8. Run your flask application
 ```bash
 python application.py
 ```
-
-7. Open your browser and go to http://localhost:9874/ to enter your flask application
+9. Open your browser and go to http://localhost:9874/ to enter your flask application
 
 # Validation
 The 3 models validation jupyter notebook are in 'validation' folder 
