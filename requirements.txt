@@ -11,4 +11,5 @@ opencv-python
 keras_applications
 bcrypt
 dlib
+deepface
 git+https://github.com/rcmalli/keras-vggface.git
