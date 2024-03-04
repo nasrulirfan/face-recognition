@@ -10,7 +10,7 @@ git clone https://github.com/nasrulirfan/face-recognition.git
 2. Install tensorflow, please refer to this link https://www.tensorflow.org/install/pip#step-by-step_instructions
 - Please also make sure you create a conda environment ONLY with Python 3.9
 
-3. Enter into conda environment (it should be installed when you follow step by step inside tensorflow instruction)
+3. Enter into conda environment (it should be installed when you follow step 3 inside the tensorflow instruction)
 ```bash
 conda activate <your conda environment name>
 ```
